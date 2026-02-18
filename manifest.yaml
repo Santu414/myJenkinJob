@@ -1,5 +1,6 @@
 app:
   name: my-node-app
+  version: 1.0.0
   environment:
     NODE_ENV: production
     PORT: 3000
