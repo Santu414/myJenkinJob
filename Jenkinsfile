@@ -1,49 +1,18 @@
 pipeline {
-    agent any
-
-    options {
-        timestamps()
-    }
-
-    parameters {
-        choice(name: 'ENV', choices: ['dev', 'stage', 'prod'], description: 'Select Environment')
+    agent {
+        docker {
+            image 'node:18'
+        }
     }
 
     stages {
-
-        stage('Checkout Code') {
+        stage('Install & Run') {
             steps {
-                checkout scm
-            }
-        }
-
-        stage('Read Manifest') {
-            steps {
-                script {
-                    def manifest = readYaml file: 'manifest.yaml'
-                    def envVars = manifest.app.environment
-
-                    envVars.each { key, value ->
-                        env[key] = value.toString()
-                    }
-
-                    echo "Environment Variables Loaded:"
-                    envVars.each { key, value ->
-                        echo "${key} = ${value}"
-                    }
-                }
-            }
-        }
-
-        stage('Install Dependencies') {
-            steps {
-                sh 'npm install'
-            }
-        }
-
-        stage('Run Application') {
-            steps {
-                sh 'node app.js'
+                sh '''
+                node -v
+                npm install
+                node app.js
+                '''
             }
         }
     }
@@ -51,12 +20,6 @@ pipeline {
     post {
         always {
             archiveArtifacts artifacts: 'application.log', fingerprint: true
-        }
-        success {
-            echo "Build Successful ✅"
-        }
-        failure {
-            echo "Build Failed ❌"
         }
     }
 }
