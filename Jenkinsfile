@@ -1,25 +1,24 @@
 pipeline {
-    agent {
-        docker {
-            image 'node:18'
-        }
-    }
+    agent any
 
     stages {
-        stage('Install & Run') {
+        stage('Checkout') {
             steps {
-                sh '''
-                node -v
-                npm install
-                node app.js
-                '''
+                git url: 'https://github.com/your-username/your-repo.git',
+                    branch: 'main'
             }
         }
-    }
 
-    post {
-        always {
-            archiveArtifacts artifacts: 'application.log', fingerprint: true
+        stage('Read YAML') {
+            steps {
+                script {
+                    def data = readYaml file: 'manifest.yaml'
+                    
+                    echo "App Name: ${data.app.name}"
+                    echo "Version: ${data.app.version}"
+                    echo "Environment: ${data.app.environment}"
+                }
+            }
         }
     }
 }
