@@ -64,6 +64,7 @@ pipeline {
 post {
     always {
         echo "===== PUSH DETECTED ====="
+        echo "BRANCH_NAME     : ${env.BRANCH_NAME}"
         echo "JOB_NAME     : ${env.JOB_NAME}"
         echo "BUILD_NUMBER : ${env.BUILD_NUMBER}"
         echo "BUILD_URL    : ${env.BUILD_URL}"
