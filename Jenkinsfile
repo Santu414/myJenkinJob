@@ -62,42 +62,24 @@ pipeline {
     }
 
  post {
-    success {
-        echo "===== BUILD SUCCESS DETAILS ====="
+    always {
+        echo "===== PUSH DETECTED ====="
         echo "JOB_NAME     : ${env.JOB_NAME}"
         echo "BUILD_NUMBER : ${env.BUILD_NUMBER}"
         echo "BUILD_URL    : ${env.BUILD_URL}"
 
         emailext(
-            subject: "SUCCESS: ${env.JOB_NAME} - Build #${env.BUILD_NUMBER}",
+            subject: "GitHub Push Detected - ${env.JOB_NAME} Build #${env.BUILD_NUMBER}",
             body: """
-                Build Successful!
+                A new push was made to the repository.
 
                 Job Name: ${env.JOB_NAME}
                 Build Number: ${env.BUILD_NUMBER}
                 Build URL: ${env.BUILD_URL}
-                App Version: ${env.APP_VERSION}
+
+                The build has been triggered due to a GitHub push.
             """,
-            recipientProviders: [developers(), requestor()]
-        )
-    }
-
-    failure {
-        echo "===== BUILD FAILURE DETAILS ====="
-        echo "JOB_NAME     : ${env.JOB_NAME}"
-        echo "BUILD_NUMBER : ${env.BUILD_NUMBER}"
-        echo "BUILD_URL    : ${env.BUILD_URL}"
-
-        emailext(
-            subject: "FAILED: ${env.JOB_NAME} - Build #${env.BUILD_NUMBER}",
-            body: """
-                Build Failed!
-
-                Job Name: ${env.JOB_NAME}
-                Build Number: ${env.BUILD_NUMBER}
-                Build URL: ${env.BUILD_URL}
-            """,
-            recipientProviders: [developers(), requestor()]
+            recipientProviders: [developers()]
         )
     }
 }
