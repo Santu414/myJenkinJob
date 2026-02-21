@@ -67,7 +67,18 @@ pipeline {
         echo "JOB_NAME     : ${env.JOB_NAME}"
         echo "BUILD_NUMBER : ${env.BUILD_NUMBER}"
         echo "BUILD_URL    : ${env.BUILD_URL}"
-        echo "BUILD_URL    : ${developers()}"
+
+        script {
+            def changeLogSets = currentBuild.changeSets
+
+            for (changeLogSet in changeLogSets) {
+                for (entry in changeLogSet.items) {
+                    echo "Commit Author : ${entry.author}"
+                    echo "Author Email  : ${entry.authorEmail}"
+                    echo "Commit Message: ${entry.msg}"
+                }
+            }
+        }
 
         emailext(
             subject: "GitHub Push Detected - ${env.JOB_NAME} Build #${env.BUILD_NUMBER}",
