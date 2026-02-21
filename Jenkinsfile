@@ -10,6 +10,7 @@ pipeline {
                defaultValue: 'https://github.com/Santu414/myJenkinJob',
                description: 'GitHub Repository URL')
 
+
         string(name: 'MANIFEST_PATH',
                defaultValue: 'manifest.yaml',
                description: 'Path to manifest file')
@@ -17,7 +18,7 @@ pipeline {
 
     stages {
 
-        stage('Checkout') {
+       stage('Checkout') {
             steps {
                 script {
 
@@ -61,60 +62,58 @@ pipeline {
 
                     echo "========== ENV VARIABLES =========="
 
-                    if (data.app.environment) {
-                        data.app.environment.each { key, value ->
-                            echo "${key} = ${value}"
-                            env."${key}" = value.toString()
-                        }
+                    data.app.environment.each { key, value ->
+                        echo "${key} = ${value}"
+                        env."${key}" = value.toString()
                     }
                 }
             }
         }
     }
 
-    post {
-        always {
-            echo "===== PUSH DETECTED ====="
-            echo "JOB_NAME     : ${env.JOB_NAME}"
-            echo "BUILD_NUMBER : ${env.BUILD_NUMBER}"
-            echo "BUILD_URL    : ${env.BUILD_URL}"
-            echo "BRANCH       : ${env.GIT_BRANCH}"
+post {
+    always {
+        echo "===== PUSH DETECTED ====="
+        echo "JOB_NAME     : ${env.JOB_NAME}"
+        echo "BUILD_NUMBER : ${env.BUILD_NUMBER}"
+        echo "BUILD_URL    : ${env.BUILD_URL}"
+        echo "BRANCH       : ${env.GIT_BRANCH}"
 
-            script {
-                def authorEmail = ""
+        script {
+            def authorEmail = ""
 
-                if (currentBuild.changeSets) {
-                    for (changeLogSet in currentBuild.changeSets) {
-                        for (entry in changeLogSet.items) {
-                            echo "Commit Author : ${entry.author}"
-                            echo "Commit Message: ${entry.msg}"
-                            authorEmail = entry.authorEmail
-                        }
-                    }
+            for (changeLogSet in currentBuild.changeSets) {
+                for (entry in changeLogSet.items) {
+                    echo "Commit Author : ${entry.author}"
+                    echo "Commit Message: ${entry.msg}"
+
+                    authorEmail = entry.authorEmail
                 }
+            }
 
-                if (authorEmail) {
-                    echo "Sending email to: ${authorEmail}"
+            if (authorEmail) {
+                echo "Sending email to: ${authorEmail}"
 
-                    emailext(
-                        subject: "GitHub Push Notification - ${env.JOB_NAME} #${env.BUILD_NUMBER}",
-                        body: """
-                            Hi,
+                emailext(
+                    subject: "GitHub Push Notification - ${env.JOB_NAME} #${env.BUILD_NUMBER}",
+                    body: """
+                        Hi,
 
-                            Your recent push triggered a Jenkins build.
+                        Your recent push triggered a Jenkins build.
 
-                            Branch: ${env.GIT_BRANCH}
-                            Build URL: ${env.BUILD_URL}
+                        Job Name: ${env.JOB_NAME}
+                        Build Number: ${env.BUILD_NUMBER}
+                        Build URL: ${env.BUILD_URL}
 
-                            Thanks,
-                            Jenkins
-                            """,
-                        to: authorEmail
-                    )
-                } else {
-                    echo "Author email not found."
-                }
+                        Thanks,
+                        Jenkins
+                    """,
+                    to: authorEmail
+                )
+            } else {
+                echo "Author email not found."
             }
         }
     }
+}
 }
