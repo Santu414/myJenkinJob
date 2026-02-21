@@ -10,9 +10,6 @@ pipeline {
                defaultValue: 'https://github.com/Santu414/myJenkinJob',
                description: 'GitHub Repository URL')
 
-        string(name: 'BRANCH_NAME',
-               defaultValue: 'master',
-               description: 'Branch Name')
 
         string(name: 'MANIFEST_PATH',
                defaultValue: 'manifest.yaml',
@@ -23,9 +20,21 @@ pipeline {
 
         stage('Checkout') {
             steps {
-                checkout scm
-                git url: params.REPO_URL,
-                    branch: env.BRANCH_NAME ?: 'master'
+                script {
+
+                    def branch = env.GIT_BRANCH
+
+                    if (!branch) {
+                        error("Branch not detected. Make sure build is triggered by GitHub webhook.")
+                    }
+
+                    branch = branch.replaceFirst(/^origin\//, '')
+
+                    echo "Detected Branch: ${branch}"
+
+                    git url: params.REPO_URL,
+                        branch: branch
+                }
             }
         }
 
