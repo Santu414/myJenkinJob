@@ -61,7 +61,7 @@ pipeline {
         }
     }
 
- post {
+post {
     always {
         echo "===== PUSH DETECTED ====="
         echo "JOB_NAME     : ${env.JOB_NAME}"
@@ -69,30 +69,40 @@ pipeline {
         echo "BUILD_URL    : ${env.BUILD_URL}"
 
         script {
-            def changeLogSets = currentBuild.changeSets
+            def authorEmail = ""
 
-            for (changeLogSet in changeLogSets) {
+            for (changeLogSet in currentBuild.changeSets) {
                 for (entry in changeLogSet.items) {
                     echo "Commit Author : ${entry.author}"
-                    echo "Author Email  : ${entry.authorEmail}"
                     echo "Commit Message: ${entry.msg}"
+
+                    authorEmail = entry.authorEmail
                 }
             }
+
+            if (authorEmail) {
+                echo "Sending email to: ${authorEmail}"
+
+                emailext(
+                    subject: "GitHub Push Notification - ${env.JOB_NAME} #${env.BUILD_NUMBER}",
+                    body: """
+                        Hi,
+
+                        Your recent push triggered a Jenkins build.
+
+                        Job Name: ${env.JOB_NAME}
+                        Build Number: ${env.BUILD_NUMBER}
+                        Build URL: ${env.BUILD_URL}
+
+                        Thanks,
+                        Jenkins
+                    """,
+                    to: authorEmail
+                )
+            } else {
+                echo "Author email not found."
+            }
         }
-
-        emailext(
-            subject: "GitHub Push Detected - ${env.JOB_NAME} Build #${env.BUILD_NUMBER}",
-            body: """
-                A new push was made to the repository.
-
-                Job Name: ${env.JOB_NAME}
-                Build Number: ${env.BUILD_NUMBER}
-                Build URL: ${env.BUILD_URL}
-
-                The build has been triggered due to a GitHub push.
-            """,
-            recipientProviders: [developers()]
-        )
     }
 }
 }
