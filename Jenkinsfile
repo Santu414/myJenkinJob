@@ -5,27 +5,15 @@ pipeline {
         githubPush()
     }
 
-    parameters {
-        string(name: 'REPO_URL',
-               defaultValue: 'https://github.com/Santu414/myJenkinJob',
-               description: 'GitHub Repository URL')
-
-        string(name: 'BRANCH_NAME',
-               defaultValue: 'master',
-               description: 'Branch Name')
-
-        string(name: 'MANIFEST_PATH',
-               defaultValue: 'manifest.yaml',
-               description: 'Path to manifest file')
-    }
-
     stages {
 
         stage('Checkout') {
             steps {
                 checkout scm
-                git url: params.REPO_URL,
-                    branch: env.BRANCH_NAME ?: 'master'
+
+                script {
+                    echo "Branch Built : ${env.GIT_BRANCH}"
+                }
             }
         }
 
@@ -33,11 +21,11 @@ pipeline {
             steps {
                 script {
 
-                    if (!fileExists(params.MANIFEST_PATH)) {
-                        error("Manifest file not found at ${params.MANIFEST_PATH}")
+                    if (!fileExists('manifest.yaml')) {
+                        error("Manifest file not found!")
                     }
 
-                    def data = readYaml file: params.MANIFEST_PATH
+                    def data = readYaml file: 'manifest.yaml'
 
                     if (!data?.app?.name) {
                         error("App name missing in manifest!")
@@ -53,58 +41,53 @@ pipeline {
 
                     echo "========== ENV VARIABLES =========="
 
-                    data.app.environment.each { key, value ->
-                        echo "${key} = ${value}"
-                        env."${key}" = value.toString()
+                    if (data.app.environment) {
+                        data.app.environment.each { key, value ->
+                            echo "${key} = ${value}"
+                            env."${key}" = value.toString()
+                        }
                     }
                 }
             }
         }
     }
 
-post {
-    always {
-        echo "===== PUSH DETECTED ====="
-        echo "JOB_NAME     : ${env.JOB_NAME}"
-        echo "BUILD_NUMBER : ${env.BUILD_NUMBER}"
-        echo "BUILD_URL    : ${env.BUILD_URL}"
-        echo "BRANCH       : ${env.GIT_BRANCH}"
+    post {
+        always {
+            echo "===== PUSH DETECTED ====="
+            echo "JOB_NAME     : ${env.JOB_NAME}"
+            echo "BUILD_NUMBER : ${env.BUILD_NUMBER}"
+            echo "BUILD_URL    : ${env.BUILD_URL}"
+            echo "BRANCH       : ${env.GIT_BRANCH}"
 
-        script {
-            def authorEmail = ""
+            script {
+                def authorEmail = ""
 
-            for (changeLogSet in currentBuild.changeSets) {
-                for (entry in changeLogSet.items) {
-                    echo "Commit Author : ${entry.author}"
-                    echo "Commit Message: ${entry.msg}"
-
-                    authorEmail = entry.authorEmail
+                for (changeLogSet in currentBuild.changeSets) {
+                    for (entry in changeLogSet.items) {
+                        echo "Commit Author : ${entry.author}"
+                        echo "Commit Message: ${entry.msg}"
+                        authorEmail = entry.authorEmail
+                    }
                 }
-            }
 
-            if (authorEmail) {
-                echo "Sending email to: ${authorEmail}"
+                if (authorEmail) {
+                    emailext(
+                        subject: "GitHub Push - ${env.JOB_NAME} #${env.BUILD_NUMBER}",
+                        body: """
+                            Hi,
 
-                emailext(
-                    subject: "GitHub Push Notification - ${env.JOB_NAME} #${env.BUILD_NUMBER}",
-                    body: """
-                        Hi,
+                            Your push to branch ${env.GIT_BRANCH} triggered this build.
 
-                        Your recent push triggered a Jenkins build.
+                            Build URL: ${env.BUILD_URL}
 
-                        Job Name: ${env.JOB_NAME}
-                        Build Number: ${env.BUILD_NUMBER}
-                        Build URL: ${env.BUILD_URL}
-
-                        Thanks,
-                        Jenkins
-                    """,
-                    to: authorEmail
-                )
-            } else {
-                echo "Author email not found."
+                            Thanks,
+                            Jenkins
+                            """,
+                        to: authorEmail
+                    )
+                }
             }
         }
     }
-}
 }
