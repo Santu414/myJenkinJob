@@ -1,17 +1,21 @@
 pipeline {
     agent any
 
+    triggers {
+        githubPush()
+    }
+
     parameters {
-        string(name: 'REPO_URL', 
-               defaultValue: 'https://github.com/Santu414/myJenkinJob', 
+        string(name: 'REPO_URL',
+               defaultValue: 'https://github.com/Santu414/myJenkinJob',
                description: 'GitHub Repository URL')
 
-        string(name: 'BRANCH_NAME', 
-               defaultValue: 'master', 
+        string(name: 'BRANCH_NAME',
+               defaultValue: 'master',
                description: 'Branch Name')
 
-        string(name: 'MANIFEST_PATH', 
-               defaultValue: 'manifest.yaml', 
+        string(name: 'MANIFEST_PATH',
+               defaultValue: 'manifest.yaml',
                description: 'Path to manifest file')
     }
 
@@ -52,21 +56,49 @@ pipeline {
                         echo "${key} = ${value}"
                         env."${key}" = value.toString()
                     }
-
-                    echo "========== EXPORTED ENV =========="
-                    echo "NODE_ENV from env: ${env.NODE_ENV}"
-                    echo "PORT from env: ${env.PORT}"
                 }
             }
         }
     }
 
-    post {
-        success {
-            echo "Pipeline executed successfully!"
-        }
-        failure {
-            echo "Pipeline failed!"
-        }
+ post {
+    success {
+        echo "===== BUILD SUCCESS DETAILS ====="
+        echo "JOB_NAME     : ${env.JOB_NAME}"
+        echo "BUILD_NUMBER : ${env.BUILD_NUMBER}"
+        echo "BUILD_URL    : ${env.BUILD_URL}"
+
+        emailext(
+            subject: "SUCCESS: ${env.JOB_NAME} - Build #${env.BUILD_NUMBER}",
+            body: """
+                Build Successful!
+
+                Job Name: ${env.JOB_NAME}
+                Build Number: ${env.BUILD_NUMBER}
+                Build URL: ${env.BUILD_URL}
+                App Version: ${env.APP_VERSION}
+            """,
+            recipientProviders: [developers(), requestor()]
+        )
     }
+
+    failure {
+        echo "===== BUILD FAILURE DETAILS ====="
+        echo "JOB_NAME     : ${env.JOB_NAME}"
+        echo "BUILD_NUMBER : ${env.BUILD_NUMBER}"
+        echo "BUILD_URL    : ${env.BUILD_URL}"
+
+        emailext(
+            subject: "FAILED: ${env.JOB_NAME} - Build #${env.BUILD_NUMBER}",
+            body: """
+                Build Failed!
+
+                Job Name: ${env.JOB_NAME}
+                Build Number: ${env.BUILD_NUMBER}
+                Build URL: ${env.BUILD_URL}
+            """,
+            recipientProviders: [developers(), requestor()]
+        )
+    }
+}
 }
