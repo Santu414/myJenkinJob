@@ -24,11 +24,11 @@ pipeline {
         stage('Checkout') {
             steps {
                 checkout scm
-                script {
-                    echo "Branch Built : ${env.GIT_BRANCH}"
-                }
+                git url: params.REPO_URL,
+                    branch: env.BRANCH_NAME ?: 'master'
             }
         }
+
         stage('Read Manifest') {
             steps {
                 script {
