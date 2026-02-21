@@ -67,6 +67,7 @@ post {
         echo "JOB_NAME     : ${env.JOB_NAME}"
         echo "BUILD_NUMBER : ${env.BUILD_NUMBER}"
         echo "BUILD_URL    : ${env.BUILD_URL}"
+        echo "BRANCH       : ${env.GIT_BRANCH}"
 
         script {
             def authorEmail = ""
