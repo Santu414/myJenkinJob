@@ -67,6 +67,7 @@ pipeline {
         echo "JOB_NAME     : ${env.JOB_NAME}"
         echo "BUILD_NUMBER : ${env.BUILD_NUMBER}"
         echo "BUILD_URL    : ${env.BUILD_URL}"
+        echo "BUILD_URL    : ${developers()}"
 
         emailext(
             subject: "GitHub Push Detected - ${env.JOB_NAME} Build #${env.BUILD_NUMBER}",
