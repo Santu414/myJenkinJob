@@ -5,15 +5,30 @@ pipeline {
         githubPush()
     }
 
+    parameters {
+        string(name: 'REPO_URL',
+               defaultValue: 'https://github.com/Santu414/myJenkinJob',
+               description: 'GitHub Repository URL')
+
+        string(name: 'BRANCH_NAME',
+               defaultValue: 'master',
+               description: 'Branch Name to Build')
+
+        string(name: 'MANIFEST_PATH',
+               defaultValue: 'manifest.yaml',
+               description: 'Path to manifest file')
+    }
+
     stages {
 
         stage('Checkout') {
             steps {
-                checkout scm
-
                 script {
-                    echo "Branch Built : ${env.GIT_BRANCH}"
+                    echo "Building Branch : ${params.BRANCH_NAME}"
                 }
+
+                git url: params.REPO_URL,
+                    branch: params.BRANCH_NAME
             }
         }
 
@@ -21,11 +36,11 @@ pipeline {
             steps {
                 script {
 
-                    if (!fileExists('manifest.yaml')) {
-                        error("Manifest file not found!")
+                    if (!fileExists(params.MANIFEST_PATH)) {
+                        error("Manifest file not found at ${params.MANIFEST_PATH}")
                     }
 
-                    def data = readYaml file: 'manifest.yaml'
+                    def data = readYaml file: params.MANIFEST_PATH
 
                     if (!data?.app?.name) {
                         error("App name missing in manifest!")
@@ -58,27 +73,32 @@ pipeline {
             echo "JOB_NAME     : ${env.JOB_NAME}"
             echo "BUILD_NUMBER : ${env.BUILD_NUMBER}"
             echo "BUILD_URL    : ${env.BUILD_URL}"
-            echo "BRANCH       : ${env.GIT_BRANCH}"
 
             script {
                 def authorEmail = ""
 
-                for (changeLogSet in currentBuild.changeSets) {
-                    for (entry in changeLogSet.items) {
-                        echo "Commit Author : ${entry.author}"
-                        echo "Commit Message: ${entry.msg}"
-                        authorEmail = entry.authorEmail
+                if (currentBuild.changeSets) {
+                    for (changeLogSet in currentBuild.changeSets) {
+                        for (entry in changeLogSet.items) {
+                            echo "Commit Author : ${entry.author}"
+                            echo "Commit Message: ${entry.msg}"
+                            authorEmail = entry.authorEmail
+                        }
                     }
                 }
 
                 if (authorEmail) {
+                    echo "Sending email to: ${authorEmail}"
+
                     emailext(
-                        subject: "GitHub Push - ${env.JOB_NAME} #${env.BUILD_NUMBER}",
+                        subject: "GitHub Push Notification - ${env.JOB_NAME} #${env.BUILD_NUMBER}",
                         body: """
                             Hi,
 
-                            Your push to branch ${env.GIT_BRANCH} triggered this build.
+                            Your recent push triggered a Jenkins build.
 
+                            Job Name: ${env.JOB_NAME}
+                            Build Number: ${env.BUILD_NUMBER}
                             Build URL: ${env.BUILD_URL}
 
                             Thanks,
@@ -86,6 +106,8 @@ pipeline {
                             """,
                         to: authorEmail
                     )
+                } else {
+                    echo "Author email not found."
                 }
             }
         }
