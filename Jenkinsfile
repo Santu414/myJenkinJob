@@ -23,11 +23,14 @@ pipeline {
 
         stage('Checkout') {
             steps {
+                script {
+                    echo "GIT_BRANCH : ${env.GIT_BRANCH}"
+                }
+
                 git url: params.REPO_URL,
-                    branch: env.BRANCH_NAME ?: 'master'
+                    branch: "${env.GIT_BRANCH}".replaceFirst(/^origin\//, '')
             }
         }
-
         stage('Read Manifest') {
             steps {
                 script {
@@ -64,7 +67,6 @@ pipeline {
 post {
     always {
         echo "===== PUSH DETECTED ====="
-        echo "BRANCH_NAME     : ${env.BRANCH_NAME}"
         echo "JOB_NAME     : ${env.JOB_NAME}"
         echo "BUILD_NUMBER : ${env.BUILD_NUMBER}"
         echo "BUILD_URL    : ${env.BUILD_URL}"
