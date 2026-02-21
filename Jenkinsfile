@@ -23,14 +23,11 @@ pipeline {
 
         stage('Checkout') {
             steps {
-                script {
-                    echo "GIT_BRANCH : ${env.GIT_BRANCH}"
-                }
-
                 git url: params.REPO_URL,
-                    branch: "${env.GIT_BRANCH}".replaceFirst(/^origin\//, '')
+                    branch: env.BRANCH_NAME ?: 'master'
             }
         }
+
         stage('Read Manifest') {
             steps {
                 script {
