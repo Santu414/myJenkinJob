@@ -12,7 +12,7 @@ pipeline {
 
         string(name: 'BRANCH_NAME',
                defaultValue: 'master',
-               description: 'Branch Name to Build')
+               description: 'Branch Name')
 
         string(name: 'MANIFEST_PATH',
                defaultValue: 'manifest.yaml',
@@ -23,12 +23,9 @@ pipeline {
 
         stage('Checkout') {
             steps {
-                script {
-                    echo "Building Branch : ${params.BRANCH_NAME}"
-                }
-
+                checkout scm
                 git url: params.REPO_URL,
-                    branch: params.BRANCH_NAME
+                    branch: env.BRANCH_NAME ?: 'master'
             }
         }
 
@@ -56,60 +53,58 @@ pipeline {
 
                     echo "========== ENV VARIABLES =========="
 
-                    if (data.app.environment) {
-                        data.app.environment.each { key, value ->
-                            echo "${key} = ${value}"
-                            env."${key}" = value.toString()
-                        }
+                    data.app.environment.each { key, value ->
+                        echo "${key} = ${value}"
+                        env."${key}" = value.toString()
                     }
                 }
             }
         }
     }
 
-    post {
-        always {
-            echo "===== PUSH DETECTED ====="
-            echo "JOB_NAME     : ${env.JOB_NAME}"
-            echo "BUILD_NUMBER : ${env.BUILD_NUMBER}"
-            echo "BUILD_URL    : ${env.BUILD_URL}"
+post {
+    always {
+        echo "===== PUSH DETECTED ====="
+        echo "JOB_NAME     : ${env.JOB_NAME}"
+        echo "BUILD_NUMBER : ${env.BUILD_NUMBER}"
+        echo "BUILD_URL    : ${env.BUILD_URL}"
+        echo "BRANCH       : ${env.GIT_BRANCH}"
 
-            script {
-                def authorEmail = ""
+        script {
+            def authorEmail = ""
 
-                if (currentBuild.changeSets) {
-                    for (changeLogSet in currentBuild.changeSets) {
-                        for (entry in changeLogSet.items) {
-                            echo "Commit Author : ${entry.author}"
-                            echo "Commit Message: ${entry.msg}"
-                            authorEmail = entry.authorEmail
-                        }
-                    }
+            for (changeLogSet in currentBuild.changeSets) {
+                for (entry in changeLogSet.items) {
+                    echo "Commit Author : ${entry.author}"
+                    echo "Commit Message: ${entry.msg}"
+
+                    authorEmail = entry.authorEmail
                 }
+            }
 
-                if (authorEmail) {
-                    echo "Sending email to: ${authorEmail}"
+            if (authorEmail) {
+                echo "Sending email to: ${authorEmail}"
 
-                    emailext(
-                        subject: "GitHub Push Notification - ${env.JOB_NAME} #${env.BUILD_NUMBER}",
-                        body: """
-                            Hi,
+                emailext(
+                    subject: "GitHub Push Notification - ${env.JOB_NAME} #${env.BUILD_NUMBER}",
+                    body: """
+                        Hi,
 
-                            Your recent push triggered a Jenkins build.
+                        Your recent push triggered a Jenkins build.
 
-                            Job Name: ${env.JOB_NAME}
-                            Build Number: ${env.BUILD_NUMBER}
-                            Build URL: ${env.BUILD_URL}
+                        Job Name: ${env.JOB_NAME}
+                        Build Number: ${env.BUILD_NUMBER}
+                        Build URL: ${env.BUILD_URL}
 
-                            Thanks,
-                            Jenkins
-                            """,
-                        to: authorEmail
-                    )
-                } else {
-                    echo "Author email not found."
-                }
+                        Thanks,
+                        Jenkins
+                    """,
+                    to: authorEmail
+                )
+            } else {
+                echo "Author email not found."
             }
         }
     }
+}
 }
