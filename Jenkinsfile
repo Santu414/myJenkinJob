@@ -1,18 +1,20 @@
 pipeline {
     agent any
 
+    // Triggered on GitHub push
     triggers {
         githubPush()
     }
 
+    // Optional parameters (used if manually triggered)
     parameters {
         string(name: 'REPO_URL',
                defaultValue: 'https://github.com/Santu414/myJenkinJob',
                description: 'GitHub Repository URL')
 
         string(name: 'BRANCH_NAME',
-               defaultValue: 'master',
-               description: 'Branch Name to Build')
+               defaultValue: '',
+               description: 'Branch Name to Build (leave empty for webhook branch)')
 
         string(name: 'MANIFEST_PATH',
                defaultValue: 'manifest.yaml',
@@ -24,18 +26,29 @@ pipeline {
         stage('Checkout') {
             steps {
                 script {
-                    echo "Building Branch : ${params.BRANCH_NAME}"
-                }
+                    // Determine branch dynamically: parameter or webhook
+                    def branch = params.BRANCH_NAME?.trim() ? params.BRANCH_NAME : env.GIT_BRANCH
+                    if (!branch) {
+                        branch = 'master' // fallback
+                    }
 
-                git url: params.REPO_URL,
-                    branch: params.BRANCH_NAME
+                    // Extract repo name dynamically
+                    def repoName = params.REPO_URL.tokenize('/').last().replace('.git','')
+
+                    echo "Repository URL: ${params.REPO_URL}"
+                    echo "Repository Name: ${repoName}"
+                    echo "Building Branch : ${branch}"
+
+                    // Checkout code
+                    git url: params.REPO_URL,
+                        branch: branch
+                }
             }
         }
 
         stage('Read Manifest') {
             steps {
                 script {
-
                     if (!fileExists(params.MANIFEST_PATH)) {
                         error("Manifest file not found at ${params.MANIFEST_PATH}")
                     }
@@ -55,7 +68,6 @@ pipeline {
                     }
 
                     echo "========== ENV VARIABLES =========="
-
                     if (data.app.environment) {
                         data.app.environment.each { key, value ->
                             echo "${key} = ${value}"
@@ -75,6 +87,7 @@ pipeline {
             echo "BUILD_URL    : ${env.BUILD_URL}"
 
             script {
+                // Get commit author email from changesets
                 def authorEmail = ""
 
                 if (currentBuild.changeSets) {
@@ -82,7 +95,9 @@ pipeline {
                         for (entry in changeLogSet.items) {
                             echo "Commit Author : ${entry.author}"
                             echo "Commit Message: ${entry.msg}"
-                            authorEmail = entry.authorEmail
+                            if (!authorEmail) {
+                                authorEmail = entry.authorEmail
+                            }
                         }
                     }
                 }
