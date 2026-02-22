@@ -22,13 +22,14 @@ pipeline {
             steps {
                 script {
 
-                    def branch = env.GIT_BRANCH
+                    def branch = params.BRANCH_NAME?.trim() ? params.BRANCH_NAME : env.GIT_BRANCH
+                   
 
                     if (!branch) {
                         error("Branch not detected. Make sure build is triggered by GitHub webhook.")
                     }
 
-                    branch = branch.replaceFirst(/^origin\//, '')
+                    branch = params.GIT_REF.replace('refs/heads/', '')
 
                     echo "Detected Branch: ${branch}"
 
