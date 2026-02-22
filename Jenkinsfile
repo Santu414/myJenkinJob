@@ -1,15 +1,20 @@
 pipeline {
     agent any
 
+    // Triggered on GitHub push
     triggers {
         githubPush()
     }
 
+    // Optional parameters (used if manually triggered)
     parameters {
         string(name: 'REPO_URL',
                defaultValue: 'https://github.com/Santu414/myJenkinJob',
                description: 'GitHub Repository URL')
 
+        string(name: 'BRANCH_NAME',
+               defaultValue: '',
+               description: 'Branch Name to Build (leave empty for webhook branch)')
 
         string(name: 'MANIFEST_PATH',
                defaultValue: 'manifest.yaml',
@@ -21,18 +26,21 @@ pipeline {
         stage('Checkout') {
             steps {
                 script {
-
+                    // Determine branch dynamically: parameter or webhook
                     def branch = params.BRANCH_NAME?.trim() ? params.BRANCH_NAME : env.GIT_BRANCH
-                   
-
+                    echo "Building Branch - Before : ${branch}"
                     if (!branch) {
-                        error("Branch not detected. Make sure build is triggered by GitHub webhook.")
+                        branch = 'feture/test-1' // fallback
                     }
 
-                    branch = params.GIT_REF.replace('refs/heads/', '')
+                    // Extract repo name dynamically
+                    def repoName = params.REPO_URL.tokenize('/').last().replace('.git','')
 
-                    echo "Detected Branch: ${branch}"
+                    echo "Repository URL: ${params.REPO_URL}"
+                    echo "Repository Name: ${repoName}"
+                    echo "Building Branch : ${branch}"
 
+                    // Checkout code
                     git url: params.REPO_URL,
                         branch: branch
                 }
@@ -42,7 +50,6 @@ pipeline {
         stage('Read Manifest') {
             steps {
                 script {
-
                     if (!fileExists(params.MANIFEST_PATH)) {
                         error("Manifest file not found at ${params.MANIFEST_PATH}")
                     }
@@ -62,59 +69,63 @@ pipeline {
                     }
 
                     echo "========== ENV VARIABLES =========="
-
-                    data.app.environment.each { key, value ->
-                        echo "${key} = ${value}"
-                        env."${key}" = value.toString()
+                    if (data.app.environment) {
+                        data.app.environment.each { key, value ->
+                            echo "${key} = ${value}"
+                            env."${key}" = value.toString()
+                        }
                     }
                 }
             }
         }
     }
 
-post {
-    always {
-        echo "===== PUSH DETECTED ====="
-        echo "JOB_NAME     : ${env.JOB_NAME}"
-        echo "BUILD_NUMBER : ${env.BUILD_NUMBER}"
-        echo "BUILD_URL    : ${env.BUILD_URL}"
-        echo "BRANCH       : ${env.GIT_BRANCH}"
+    post {
+        always {
+            echo "===== PUSH DETECTED ====="
+            echo "JOB_NAME     : ${env.JOB_NAME}"
+            echo "BUILD_NUMBER : ${env.BUILD_NUMBER}"
+            echo "BUILD_URL    : ${env.BUILD_URL}"
 
-        script {
-            def authorEmail = ""
+            script {
+                // Get commit author email from changesets
+                def authorEmail = ""
 
-            for (changeLogSet in currentBuild.changeSets) {
-                for (entry in changeLogSet.items) {
-                    echo "Commit Author : ${entry.author}"
-                    echo "Commit Message: ${entry.msg}"
-
-                    authorEmail = entry.authorEmail
+                if (currentBuild.changeSets) {
+                    for (changeLogSet in currentBuild.changeSets) {
+                        for (entry in changeLogSet.items) {
+                            echo "Commit Author : ${entry.author}"
+                            echo "Commit Message: ${entry.msg}"
+                            if (!authorEmail) {
+                                authorEmail = entry.authorEmail
+                            }
+                        }
+                    }
                 }
-            }
 
-            if (authorEmail) {
-                echo "Sending email to: ${authorEmail}"
+                if (authorEmail) {
+                    echo "Sending email to: ${authorEmail}"
 
-                emailext(
-                    subject: "GitHub Push Notification - ${env.JOB_NAME} #${env.BUILD_NUMBER}",
-                    body: """
-                        Hi,
+                    emailext(
+                        subject: "GitHub Push Notification - ${env.JOB_NAME} #${env.BUILD_NUMBER}",
+                        body: """
+                            Hi,
 
-                        Your recent push triggered a Jenkins build.
+                            Your recent push triggered a Jenkins build.
 
-                        Job Name: ${env.JOB_NAME}
-                        Build Number: ${env.BUILD_NUMBER}
-                        Build URL: ${env.BUILD_URL}
+                            Job Name: ${env.JOB_NAME}
+                            Build Number: ${env.BUILD_NUMBER}
+                            Build URL: ${env.BUILD_URL}
 
-                        Thanks,
-                        Jenkins
-                    """,
-                    to: authorEmail
-                )
-            } else {
-                echo "Author email not found."
+                            Thanks,
+                            Jenkins
+                            """,
+                        to: authorEmail
+                    )
+                } else {
+                    echo "Author email not found."
+                }
             }
         }
     }
-}
 }
