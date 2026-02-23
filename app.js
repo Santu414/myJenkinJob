@@ -10,4 +10,4 @@ log("Application started");
 log(`NODE_ENV: ${process.env.NODE_ENV}`);
 log(`PORT: ${process.env.PORT}`);
 log(`DB_HOST: ${process.env.DB_HOST}`);
-log("Application completed successfully!!!!!!!");
+log("Application completed successfully!!!!!!!!!");

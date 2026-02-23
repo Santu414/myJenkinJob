@@ -96,7 +96,6 @@ pipeline {
                         for (entry in changeLogSet.items) {
                             echo "Commit Author : ${entry.author}"
                             echo "Commit Message: ${entry.msg}"
-                            echo "Commit Author Email: ${entry.authorEmail}"
                             if (!authorEmail) {
                                 authorEmail = entry.authorEmail
                             }
