@@ -13,7 +13,7 @@ pipeline {
                description: 'GitHub Repository URL')
 
         string(name: 'BRANCH_NAME',
-               defaultValue: '',
+               defaultValue: 'furure/test-1',
                description: 'Branch Name to Build (leave empty for webhook branch)')
 
         string(name: 'MANIFEST_PATH',
