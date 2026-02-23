@@ -30,7 +30,7 @@ pipeline {
                     def branch = params.BRANCH_NAME?.trim() ? params.BRANCH_NAME : env.GIT_BRANCH
                     echo "Building Branch - Before : ${branch}"
                     if (!branch) {
-                        branch = 'feture/test-1' // fallback
+                        branch = 'master' // fallback
                     }
 
                     // Extract repo name dynamically
