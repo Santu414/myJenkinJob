@@ -30,7 +30,7 @@ pipeline {
                     def branch = params.BRANCH_NAME?.trim() ? params.BRANCH_NAME : env.GIT_BRANCH
                     echo "Building Branch - Before : ${branch}"
                     if (!branch) {
-                        branch = 'master' // fallback
+                        branch = 'feture/test-1' // fallback
                     }
 
                     // Extract repo name dynamically
@@ -96,6 +96,7 @@ pipeline {
                         for (entry in changeLogSet.items) {
                             echo "Commit Author : ${entry.author}"
                             echo "Commit Message: ${entry.msg}"
+                            echo "Commit Author Email: ${entry.authorEmail}"
                             if (!authorEmail) {
                                 authorEmail = entry.authorEmail
                             }
